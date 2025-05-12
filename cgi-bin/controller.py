@@ -29,30 +29,40 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../lib/"))
 from pihole import pihole_core  # noqa: E402
 from ubiquity import ubiquity  # noqa: E402
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="[%(asctime)s] - [%(name)s] - [%(levelname)s] - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+
+logger = logging.getLogger()
+logger.debug("test")
+
 
 description = """
-Home network API helps you do awesome stuff for pihole and ubiquity installations. 🚀
+API to manage pihole < 5 API devices and ubiquity API based devices. 🚀
 
 ## Key Ideas
 
 * Disable DNS for certain domains.
 * Disable MAC Addresses at the Ubiquity Gateway
+* Disable/Enable traffic rules on the fly (which are more complex than blocking one device at time)
 
 ## Caveat Emptor
 
-Will not work if the endpoint does not talk to the Ubiquity Gateway or the PiHole DNS server.
+Will not work if the endpoint does not talk to the Ubiquity Gateway or the PiHole DNS server is version 6 (for now).
 """
 
 app = FastAPI(
     title="Overlord API",
-    version="v2",
+    version="v2.0",
     openapi_version="3.0.2",
     description=description,
-    summary="Deadpool's favorite app. Nuff said.",
-    terms_of_service="http://5l-labs.com/terms/",
+    summary="Ubiquity Gateway and PiHole DNS server management",
+    terms_of_service="http://5l-labs.com/",
     contact={
-        "name": "Nick Lange",
-        "url": "https://5l-labs.com",
+        "name": "5L-Labs",
+        "url": "https://github.com/5L-Labs/dns_admin",
         "email": "inquiry@5l-labs.com",
     },
     license_info={
@@ -62,18 +72,8 @@ app = FastAPI(
 )
 
 
-# ~njl/dev/src/overlord/dns_admin/venv/bin/python3
-
-# FIXME: Move to GUNICORN Logging object
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-streamHandler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter("[%(asctime)s] - [%(name)s] - [%(levelname)s] - %(message)s")
-streamHandler.setFormatter(formatter)
-logger.addHandler(streamHandler)
-
-
 def init_config(app, config_location: str = "../etc/config.ini"):
+    global logger
     app_config = dict()
     config = configparser.ConfigParser()
     try:
@@ -117,6 +117,7 @@ def init_config(app, config_location: str = "../etc/config.ini"):
                 app_config["ubiquiti_rules"][x] = {}
                 logger.debug(f"Enabled{app_config['ubiquiti_rules'][x]}")
 
+        app_config["logger"] = logger
     except configparser.Error as a:
         logger.error("Couldn't read configs from: %s %s" % (config_location, a))
     logger.info(app_config)
@@ -130,6 +131,9 @@ config_file = os.path.join(os.path.dirname(__file__), "../etc/", "config.ini")
 
 app_config = init_config(app, config_file)
 
+# ~njl/dev/src/overlord/dns_admin/venv/bin/python3
+
+# FIXME: Move to GUNICORN Logging object
 
 sharedMemManager = Manager()
 app_config["shmem_store"] = sharedMemManager.dict()
@@ -150,4 +154,4 @@ logger.info("starting the app...")
 
 @app.get("/")
 async def root():
-    return {"message": "Hello Bigger Applications!"}
+    return {"status": "alive"}
