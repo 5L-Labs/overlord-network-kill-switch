@@ -35,8 +35,8 @@ full: venv
 	)
 
 release:
-	podman tag localhost/overlord-dns-admin:latest ghcr.io/${GHCR_USERNAME}/overlord-network-kill-switch:${VERSION}
-	podman push ghcr.io/${GHCR_USERNAME}/overlord-network-kill-switch:${VERSION}
+	podman tag localhost/overlord-dns-admin:latest ghcr.io/${RELEASE_USERNAME}/overlord-network-kill-switch:${VERSION}
+	podman push ghcr.io/${RELEASE_USERNAME}/overlord-network-kill-switch:${VERSION}
 
 push:
 	podman tag localhost/overlord-dns-admin:latest ghcr.io/${GHCR_USERNAME}/overlord-network-kill-switch:${VERSION}-test

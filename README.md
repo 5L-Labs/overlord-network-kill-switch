@@ -117,7 +117,7 @@ graph TD
 
     subgraph "Orchestration & Logic"
         E[Node-RED]
-        F[DNS Admin Server (Flask/Gunicorn)]
+        F[DNS Admin Server Gunicorn]
         E -->|Forwards Request| F
     end
 
@@ -138,3 +138,5 @@ graph TD
     D -- "Status Update" --> C
     C -- "Update Switch State" --> A
 ```
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/njll)
