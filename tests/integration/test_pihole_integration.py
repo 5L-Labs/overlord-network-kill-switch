@@ -53,12 +53,14 @@ class TestHealthCheck:
     def test_overlord_root(self, client):
         """Test Overlord root endpoint responds."""
         response = client.get("/")
+        print(f"Overlord response: {response.status_code} - {response.text}")
         assert response.status_code == 200
         assert response.json() == {"status": "alive"}
 
     def test_pihole_reachable(self, pihole_client):
         """Test Pi-hole is reachable."""
         response = pihole_client.get("/admin/")
+        print(f"Pi-hole response: {response.status_code}")
         assert response.status_code == 200
 
 
@@ -68,6 +70,7 @@ class TestDomainBlocking:
     def test_get_domain_block_status(self, client):
         """Test getting domain block status."""
         response = client.get("/pihole/status/testblock")
+        print(f"GET /pihole/status/testblock: {response.status_code} - {response.text}")
         assert response.status_code == 200, f"Got {response.status_code}: {response.text}"
         data = response.json()
         assert "status" in data, f"Response missing 'status': {data}"
@@ -75,11 +78,13 @@ class TestDomainBlocking:
     def test_enable_domain_block(self, client):
         """Test enabling a domain block."""
         response = client.post("/pihole/enable/testblock")
+        print(f"POST /pihole/enable/testblock: {response.status_code} - {response.text}")
         assert response.status_code == 200, f"Got {response.status_code}: {response.text}"
         data = response.json()
         assert data.get("status") == "ok", f"Expected 'ok', got: {data}"
 
         status_response = client.get("/pihole/status/testblock")
+        print(f"GET /pihole/status/testblock after enable: {status_response.text}")
         status_data = status_response.json()
         assert status_data.get("status") == "true", f"Expected 'true', got: {status_data}"
 
