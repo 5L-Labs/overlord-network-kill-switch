@@ -131,3 +131,29 @@ See `etc/webserver_requirements.txt` for full list. Key packages:
 - **Ubiquiti Control 9.4.19 Support:** Updated for latest Ubiquiti controller
 - **Ubiquiti Session Caching:** Session data cached for performance
 - **MQTT LWT Publishing:** Announces service status via MQTT
+- **MQTT Bug Fix:** Fixed `topic_list` -> `lwt_topics` NameError in controller.py
+- **Container Health Check:** Added HEALTHCHECK to Containerfile
+- **Test Infrastructure:** Added pytest with unit tests (37 tests passing)
+
+## Work In Progress (Branch: feature/observability-health-checks)
+
+**Completed:**
+- Container HEALTHCHECK in Containerfile (curl to localhost:19000 every 30s)
+- Datadog monitoring config in `monitoring/` directory
+- Unit tests: 37 tests passing (mocked Pi-hole + Ubiquiti)
+- GitHub Actions workflow: Unit tests + Container Build Test passing
+- MQTT error handling made non-fatal (warning instead of crash)
+
+**In Progress:**
+- Integration tests with real Pi-hole container
+- Issue: Containers start (Pi-hole + Overlord) but pytest fails
+- Debug needed: Check CI logs with GitHub auth OR run `make test-integration` locally
+
+**Files added/modified on this branch:**
+- `.github/workflows/test.yaml` - CI workflow
+- `tests/` - Test directory with unit + integration tests
+- `tests/docker-compose.test.yaml` - Pi-hole + Overlord for integration tests
+- `monitoring/` - Datadog monitor configs
+- `etc/test_requirements.txt` - pytest dependencies
+- `Containerfile` - Added HEALTHCHECK
+- `Makefile` - Added test-unit, test-integration targets
