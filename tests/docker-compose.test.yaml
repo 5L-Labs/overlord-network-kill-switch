@@ -4,6 +4,7 @@ services:
   pihole:
     image: pihole/pihole:latest
     container_name: pihole-test
+    hostname: pihole
     environment:
       TZ: "America/New_York"
       WEBPASSWORD: "testpassword"
@@ -29,6 +30,7 @@ services:
       context: ..
       dockerfile: Containerfile
     container_name: overlord-test
+    hostname: overlord
     environment:
       REMOTE_PI_LIST: "pihole"
       REMOTE_PI_PASSWORD: "testpassword"
@@ -41,6 +43,12 @@ services:
         condition: service_healthy
     volumes:
       - ./fixtures/config.test.ini:/opt/webserver/etc/config.ini:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:19000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - test-network
 

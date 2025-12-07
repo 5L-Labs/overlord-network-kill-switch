@@ -73,38 +73,36 @@ jobs:
         run: |
           cd tests
           docker compose -f docker-compose.test.yaml up -d --build
-          echo "Waiting for containers to start..."
-          sleep 30
+          echo "Waiting for containers to be healthy..."
           
-          echo "Waiting for Pi-hole..."
-          for i in $(seq 1 24); do
-            if curl -sf http://localhost:8080/admin/ > /dev/null 2>&1; then
-              echo "Pi-hole is ready"
+          # Wait for both containers to be healthy
+          for i in $(seq 1 30); do
+            PIHOLE_STATUS=$(docker inspect --format='{{.State.Health.Status}}' pihole-test 2>/dev/null || echo "not found")
+            OVERLORD_STATUS=$(docker inspect --format='{{.State.Health.Status}}' overlord-test 2>/dev/null || echo "not found")
+            echo "Attempt $i: Pi-hole=$PIHOLE_STATUS, Overlord=$OVERLORD_STATUS"
+            
+            if [ "$PIHOLE_STATUS" = "healthy" ] && [ "$OVERLORD_STATUS" = "healthy" ]; then
+              echo "Both containers are healthy!"
               break
             fi
-            echo "Attempt $i: Pi-hole not ready, waiting..."
+            
+            if [ "$i" = "30" ]; then
+              echo "Timeout waiting for containers"
+              docker ps -a
+              echo "=== Pi-hole logs ==="
+              docker logs pihole-test 2>&1 | tail -30 || true
+              echo "=== Overlord logs ==="
+              docker logs overlord-test 2>&1 | tail -50 || true
+              exit 1
+            fi
+            
             sleep 10
           done
           
-          echo "Waiting for Overlord..."
-          for i in $(seq 1 12); do
-            if curl -sf http://localhost:19000/ > /dev/null 2>&1; then
-              echo "Overlord is ready"
-              break
-            fi
-            echo "Attempt $i: Overlord not ready, waiting..."
-            docker compose -f docker-compose.test.yaml logs overlord --tail=10 2>/dev/null || true
-            sleep 5
-          done
-          
-          echo "Final status check:"
+          echo "=== Final container status ==="
+          docker ps -a
           curl -sf http://localhost:8080/admin/ && echo "Pi-hole: OK" || echo "Pi-hole: FAILED"
           curl -sf http://localhost:19000/ && echo "Overlord: OK" || echo "Overlord: FAILED"
-          
-          echo "=== Container status ==="
-          docker ps -a
-          echo "=== Overlord container logs ==="
-          docker logs overlord-test 2>&1 | tail -50 || true
 
       - name: Run integration tests
         run: |
