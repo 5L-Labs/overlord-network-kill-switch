@@ -69,7 +69,7 @@ jobs:
       - name: Start test containers
         run: |
           cd tests
-          docker-compose -f docker-compose.test.yaml up -d --build
+          docker compose -f docker-compose.test.yaml up -d --build
           sleep 60
 
       - name: Wait for Pi-hole to be ready
@@ -91,19 +91,22 @@ jobs:
         if: failure()
         run: |
           cd tests
-          docker-compose -f docker-compose.test.yaml logs
+          docker compose -f docker-compose.test.yaml logs
 
       - name: Cleanup
         if: always()
         run: |
           cd tests
-          docker-compose -f docker-compose.test.yaml down -v
+          docker compose -f docker-compose.test.yaml down -v
 
   build-test:
     name: Container Build Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create test config
+        run: cp etc/config.ini.sample etc/config.ini
 
       - name: Build container
         run: docker build -f Containerfile -t overlord-test .
