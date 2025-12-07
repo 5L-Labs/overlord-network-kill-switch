@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole-test
+    hostname: pihole
+    environment:
+      TZ: "America/New_York"
+      WEBPASSWORD: "testpassword"
+      FTLCONF_webserver_api_password: "testpassword"
+    ports:
+      - "8080:80"
+      - "5353:53/tcp"
+      - "5353:53/udp"
+    volumes:
+      - pihole_data:/etc/pihole
+      - dnsmasq_data:/etc/dnsmasq.d
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost/admin/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - test-network
+
+  overlord:
+    build:
+      context: ..
+      dockerfile: Containerfile
+    container_name: overlord-test
+    hostname: overlord
+    environment:
+      REMOTE_PI_LIST: "pihole"
+      REMOTE_PI_PASSWORD: "testpassword"
+      REMOTE_UBIQUITI_DEVICE: "localhost"
+      REMOTE_UBIQUITI_API_KEY: "test"
+    ports:
+      - "19000:19000"
+    depends_on:
+      pihole:
+        condition: service_healthy
+    volumes:
+      - ./fixtures/config.test.ini:/opt/webserver/etc/config.ini:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:19000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - test-network
+
+volumes:
+  pihole_data:
+  dnsmasq_data:
+
+networks:
+  test-network:
+    driver: bridge

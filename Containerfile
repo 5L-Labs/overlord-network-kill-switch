@@ -21,6 +21,11 @@ COPY etc/config.ini /opt/webserver/etc/
 #PYTHONPATH=../../dns_admin/lib/
 WORKDIR /opt/webserver/
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:19000/ || exit 1
+
 ### FIXME: workers 1 to avoid state issues on ubiquity - need another URL to get status, that's cheap...
 ### FIXME: move from --reload to --preload (to fix a weird issue of locking up)
 ### https://github.com/benoitc/gunicorn/issues/1923

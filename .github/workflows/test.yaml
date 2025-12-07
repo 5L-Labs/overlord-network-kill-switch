@@ -1,0 +1,188 @@
+name: Tests
+
+on:
+  push:
+    branches: [master, main, 'feature/**']
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -r etc/webserver_requirements.txt
+          uv pip install -r etc/test_requirements.txt
+
+      - name: Run unit tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/unit -v -m unit --tb=short --cov=lib --cov=cgi-bin --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -r etc/webserver_requirements.txt
+          uv pip install -r etc/test_requirements.txt
+
+      - name: Prepare test environment
+        run: cp etc/config.ini.sample etc/config.ini
+
+      - name: Start test containers
+        run: |
+          cd tests
+          docker compose -f docker-compose.test.yaml up -d --build
+          echo "Waiting for containers to be healthy..."
+          
+          # Wait for both containers to be healthy
+          for i in $(seq 1 30); do
+            PIHOLE_STATUS=$(docker inspect --format='{{.State.Health.Status}}' pihole-test 2>/dev/null || echo "not found")
+            OVERLORD_STATUS=$(docker inspect --format='{{.State.Health.Status}}' overlord-test 2>/dev/null || echo "not found")
+            echo "Attempt $i: Pi-hole=$PIHOLE_STATUS, Overlord=$OVERLORD_STATUS"
+            
+            if [ "$PIHOLE_STATUS" = "healthy" ] && [ "$OVERLORD_STATUS" = "healthy" ]; then
+              echo "Both containers are healthy!"
+              break
+            fi
+            
+            if [ "$i" = "30" ]; then
+              echo "Timeout waiting for containers"
+              docker ps -a
+              echo "=== Pi-hole logs ==="
+              docker logs pihole-test 2>&1 | tail -30 || true
+              echo "=== Overlord logs ==="
+              docker logs overlord-test 2>&1 | tail -50 || true
+              exit 1
+            fi
+            
+            sleep 10
+          done
+          
+          echo "=== Final container status ==="
+          docker ps -a
+          
+          echo "=== Smoke test endpoints ==="
+          curl -sf http://127.0.0.1:8080/admin/ && echo "Pi-hole /admin/: OK" || echo "Pi-hole /admin/: FAILED"
+          curl -sf http://127.0.0.1:19000/ && echo "Overlord /: OK" || echo "Overlord /: FAILED"
+          curl -sf http://127.0.0.1:19000/alldns/ && echo "Overlord /alldns/: OK" || echo "Overlord /alldns/: FAILED"
+          
+          echo "=== Response bodies ==="
+          curl -s http://127.0.0.1:19000/ || true
+          echo ""
+          curl -s http://127.0.0.1:19000/alldns/ || true
+          echo ""
+
+      - name: Run integration tests
+        env:
+          OVERLORD_URL: "http://127.0.0.1:19000"
+          PIHOLE_URL: "http://127.0.0.1:8080"
+        run: |
+          source .venv/bin/activate
+          echo "=== Running pytest ==="
+          pytest tests/integration -v -m integration --tb=long -s 2>&1 | tee pytest_output.txt
+          TEST_EXIT=${PIPESTATUS[0]}
+          echo "=== Pytest exit code: $TEST_EXIT ==="
+          cat pytest_output.txt
+          exit $TEST_EXIT
+
+      - name: Show container state on failure
+        if: failure()
+        run: |
+          echo "=== Container status ==="
+          docker ps -a
+          echo "=== pihole-test inspect ==="
+          docker inspect pihole-test || true
+          echo "=== overlord-test inspect ==="
+          docker inspect overlord-test || true
+
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          cd tests
+          docker compose -f docker-compose.test.yaml logs
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd tests
+          docker compose -f docker-compose.test.yaml down -v
+
+  build-test:
+    name: Container Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create test config
+        run: cp etc/config.ini.sample etc/config.ini
+
+      - name: Build container
+        run: docker build -f Containerfile -t overlord-test .
+
+      - name: Test container starts
+        run: |
+          docker run -d --name overlord-build-test \
+            -e REMOTE_PI_LIST="localhost" \
+            -e REMOTE_PI_PASSWORD="test" \
+            -e REMOTE_UBIQUITI_DEVICE="localhost" \
+            -e REMOTE_UBIQUITI_API_KEY="test" \
+            -p 19001:19000 \
+            overlord-test
+          sleep 15
+          for i in 1 2 3 4 5; do
+            if curl -sf http://localhost:19001/; then
+              echo "Container is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting..."
+            sleep 5
+          done
+          echo "Container failed to start"
+          docker logs overlord-build-test
+          exit 1
+
+      - name: Cleanup build test
+        if: always()
+        run: docker stop overlord-build-test || true

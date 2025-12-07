@@ -1,0 +1,93 @@
+# Datadog Monitor Configuration for Overlord Network Kill Switch
+# Deploy via Datadog API or Terraform datadog_monitor resource
+#
+# Prerequisites:
+# - Datadog Agent running on monitoring node with HTTP check integration
+# - Network connectivity to the overlord container on port 19000
+
+# HTTP Check Configuration (install on Datadog Agent node)
+# Place in /etc/datadog-agent/conf.d/http_check.d/conf.yaml
+http_check:
+  init_config:
+  instances:
+    - name: overlord_network_kill_switch
+      url: http://<OVERLORD_HOST>:19000/
+      method: GET
+      timeout: 10
+      http_response_status_code: 200
+      collect_response_time: true
+      tags:
+        - service:overlord-network-kill-switch
+        - env:production
+        - team:homelab
+
+---
+# Datadog Monitor Definition
+# Apply via API: https://docs.datadoghq.com/api/latest/monitors/#create-a-monitor
+# Or use Terraform: https://registry.terraform.io/providers/DataDog/datadog/latest/docs/resources/monitor
+
+monitor:
+  name: "Overlord Network Kill Switch - Service Down"
+  type: service check
+  query: '"http.can_connect".over("instance:overlord_network_kill_switch").by("host").last(3).count_by_status()'
+  message: |
+    {{#is_alert}}
+    🚨 Overlord Network Kill Switch is DOWN!
+    
+    The service at {{host.name}} is not responding to health checks.
+    This affects HomeKit network controls for Pi-hole and Ubiquiti.
+    
+    **Troubleshooting:**
+    1. Check container status: `podman ps -a | grep overlord`
+    2. Check container logs: `podman logs overlord-dns`
+    3. Restart if needed: `podman restart overlord-dns`
+    
+    @slack-homelab-alerts
+    {{/is_alert}}
+    
+    {{#is_recovery}}
+    ✅ Overlord Network Kill Switch has recovered on {{host.name}}.
+    {{/is_recovery}}
+  options:
+    thresholds:
+      critical: 3
+      warning: 1
+      ok: 1
+    notify_no_data: true
+    no_data_timeframe: 5
+    notify_audit: false
+    renotify_interval: 60
+    escalation_message: "Service still down after 1 hour. Manual intervention required."
+  tags:
+    - service:overlord-network-kill-switch
+    - env:production
+    - team:homelab
+  priority: 2
+
+---
+# Response Time Monitor
+monitor_response_time:
+  name: "Overlord Network Kill Switch - Slow Response"
+  type: metric alert
+  query: "avg(last_5m):avg:network.http.response_time{instance:overlord_network_kill_switch} > 5"
+  message: |
+    {{#is_alert}}
+    ⚠️ Overlord Network Kill Switch is responding slowly (>5s average).
+    
+    Current response time: {{value}}s
+    
+    This may indicate resource constraints or service degradation.
+    {{/is_alert}}
+    
+    {{#is_recovery}}
+    ✅ Response time has returned to normal.
+    {{/is_recovery}}
+  options:
+    thresholds:
+      critical: 5
+      warning: 2
+    notify_no_data: false
+  tags:
+    - service:overlord-network-kill-switch
+    - env:production
+  priority: 3
