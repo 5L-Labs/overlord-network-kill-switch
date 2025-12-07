@@ -45,9 +45,10 @@ class TestHealthCheck:
 
     def test_pihole_reachable(self, pihole_client):
         """Test Pi-hole is reachable."""
-        response = pihole_client.get("/admin/")
+        response = pihole_client.get("/admin/", follow_redirects=True)
         print(f"Pi-hole response: {response.status_code}")
-        assert response.status_code == 200
+        # Pi-hole v6 may redirect to login, but any 2xx/3xx means it's reachable
+        assert response.status_code in (200, 302)
 
 
 class TestGlobalDNSControl:
