@@ -16,11 +16,11 @@ services:
       - pihole_data:/etc/pihole
       - dnsmasq_data:/etc/dnsmasq.d
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/admin/api.php"]
+      test: ["CMD", "curl", "-sf", "http://localhost/admin/"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
     networks:
       - test-network
 

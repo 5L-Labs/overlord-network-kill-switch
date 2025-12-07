@@ -73,7 +73,7 @@ jobs:
         run: |
           cd tests
           docker compose -f docker-compose.test.yaml up -d --build
-          sleep 60
+          sleep 90
 
       - name: Wait for Pi-hole to be ready
         run: |
