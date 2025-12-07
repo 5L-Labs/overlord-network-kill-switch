@@ -109,18 +109,11 @@ jobs:
       - name: Run integration tests
         run: |
           source .venv/bin/activate
-          set +e
-          pytest tests/integration -v -m integration --tb=long -s 2>&1
-          TEST_EXIT=$?
-          set -e
-          echo "=== Test run complete (exit code: $TEST_EXIT) ==="
-          if [ $TEST_EXIT -ne 0 ]; then
-            echo "=== Debug: checking service status ==="
-            curl -v http://localhost:19000/ 2>&1 || echo "Overlord not responding"
-            curl -v http://localhost:8080/admin/ 2>&1 | head -20 || echo "Pi-hole not responding"
-            echo "=== Overlord logs ==="
-            cd tests && docker compose -f docker-compose.test.yaml logs overlord --tail=100
-          fi
+          echo "=== Running pytest ==="
+          pytest tests/integration -v -m integration --tb=long -s 2>&1 | tee pytest_output.txt
+          TEST_EXIT=${PIPESTATUS[0]}
+          echo "=== Pytest exit code: $TEST_EXIT ==="
+          cat pytest_output.txt
           exit $TEST_EXIT
 
       - name: Show container logs on failure
