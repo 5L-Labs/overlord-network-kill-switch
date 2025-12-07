@@ -32,8 +32,8 @@ services:
     environment:
       REMOTE_PI_LIST: "pihole"
       REMOTE_PI_PASSWORD: "testpassword"
-      REMOTE_UBIQUITI_DEVICE: ""
-      REMOTE_UBIQUITI_API_KEY: ""
+      REMOTE_UBIQUITI_DEVICE: "localhost"
+      REMOTE_UBIQUITI_API_KEY: "test"
     ports:
       - "19000:19000"
     depends_on:
