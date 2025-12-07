@@ -6,7 +6,7 @@ These tests focus on the route handlers in isolation.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 pytestmark = pytest.mark.unit
 

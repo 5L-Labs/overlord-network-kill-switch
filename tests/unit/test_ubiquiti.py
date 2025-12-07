@@ -108,7 +108,7 @@ class TestUbiquitiOverlord:
         overlord.first_connect()
         overlord.parse_firewall_rules()
 
-        result = overlord.change_rule("disabled", "Block_Social")
+        overlord.change_rule("disabled", "Block_Social")
 
         mock_ubiquiti_session.put.assert_called_once()
         call_args = mock_ubiquiti_session.put.call_args
