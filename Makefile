@@ -3,7 +3,7 @@
 # deprecated dns_servers, source via envfile
 include private/etc/envfile
 include private/ghcr_username
-VERSION=2.5
+VERSION=2.6
 
 check-env-%:
 	@ # This code checks if an environment variable is empty
