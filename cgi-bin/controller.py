@@ -215,7 +215,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Overlord Network Kill Switch API",
-    version="v2.5",
+    version="v2.6",
     openapi_version="3.0.2",
     description=description,
     summary="Ubiquity Gateway and PiHole DNS server management",
