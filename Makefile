@@ -63,5 +63,19 @@ test-release:
 	podman pull ghcr.io/${GHCR_USERNAME}/overlord-network-kill-switch:${VERSION}
 	$(TEST_CMD) ghcr.io/${GHCR_USERNAME}/overlord-network-kill-switch:${VERSION}
 
+test-unit:
+	. .venv/bin/activate && pytest tests/unit -v -m unit --tb=short
+
+test-integration:
+	cd tests && docker-compose -f docker-compose.test.yaml up -d --build
+	sleep 60
+	. .venv/bin/activate && pytest tests/integration -v -m integration --tb=short
+	cd tests && docker-compose -f docker-compose.test.yaml down -v
+
+test-integration-down:
+	cd tests && docker-compose -f docker-compose.test.yaml down -v
+
+test: test-unit
+
 all:
 	@echo "No op."

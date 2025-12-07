@@ -98,6 +98,15 @@ make push
 
 # Deploy to remote
 target=user@host make push-local
+
+# Run unit tests (mocked, fast)
+make test-unit
+
+# Run integration tests (requires Docker, spins up Pi-hole)
+make test-integration
+
+# Cleanup integration test containers
+make test-integration-down
 ```
 
 ## Key Classes
