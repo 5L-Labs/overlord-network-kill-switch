@@ -73,17 +73,33 @@ jobs:
         run: |
           cd tests
           docker compose -f docker-compose.test.yaml up -d --build
-          sleep 90
-
-      - name: Wait for Pi-hole to be ready
-        run: |
-          timeout 120 bash -c 'until curl -s http://localhost:8080/admin/ > /dev/null; do sleep 5; done'
-          echo "Pi-hole is ready"
-
-      - name: Wait for Overlord to be ready
-        run: |
-          timeout 60 bash -c 'until curl -s http://localhost:19000/ > /dev/null; do sleep 5; done'
-          echo "Overlord is ready"
+          echo "Waiting for containers to start..."
+          sleep 30
+          
+          echo "Waiting for Pi-hole..."
+          for i in $(seq 1 24); do
+            if curl -sf http://localhost:8080/admin/ > /dev/null 2>&1; then
+              echo "Pi-hole is ready"
+              break
+            fi
+            echo "Attempt $i: Pi-hole not ready, waiting..."
+            sleep 10
+          done
+          
+          echo "Waiting for Overlord..."
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:19000/ > /dev/null 2>&1; then
+              echo "Overlord is ready"
+              break
+            fi
+            echo "Attempt $i: Overlord not ready, waiting..."
+            docker compose -f docker-compose.test.yaml logs overlord --tail=10 2>/dev/null || true
+            sleep 5
+          done
+          
+          echo "Final status check:"
+          curl -sf http://localhost:8080/admin/ && echo "Pi-hole: OK" || echo "Pi-hole: FAILED"
+          curl -sf http://localhost:19000/ && echo "Overlord: OK" || echo "Overlord: FAILED"
 
       - name: Run integration tests
         run: |
