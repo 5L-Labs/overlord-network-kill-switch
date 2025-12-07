@@ -50,7 +50,7 @@ push-local: check-env-target
 #-v ./cgi-bin/:/opt/webserver/cgi-bin/ -v ./lib/:/opt/webserver/lib/
 #  -v ./etc/config.ini:/opt/webserver/etc/config.ini
 # --dns=${DNS_SERVERS} # deprecated? podman bug?
-TEST_CMD = podman run -d --replace --name=overlord-dns -p 19000:19000 --env-file=./etc/envfile
+TEST_CMD = podman run -d --replace --name=overlord-dns -p 19000:19000 --restart=on-failure:5 --env-file=./etc/envfile
 
 test-local:
 	$(TEST_CMD) localhost/overlord-dns-admin
