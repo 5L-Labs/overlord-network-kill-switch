@@ -12,3 +12,8 @@ venv
 etc/dns_servers
 etc/config.ini
 etc/envfile
+private
+pihole6api
+pihole/
+GEMINI.md
+summary.md
