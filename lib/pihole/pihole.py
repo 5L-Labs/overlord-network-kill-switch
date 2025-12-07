@@ -87,7 +87,7 @@ class PiHoleOverlord(BaseHTTPHandler):
         #             )
         #             return {"status": "Unknown"}
 
-        if domain_block is None or domain_block not in self.block_domains:
+        if domain_block is None or (domain_block not in self.block_domains and domain_block not in self.allow_domains):
             return {"status": "Unknown"}
         if not self.logged_in:
             logger.debug("Not logged in, logging in...")
