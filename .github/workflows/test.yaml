@@ -102,10 +102,22 @@ jobs:
           
           echo "=== Final container status ==="
           docker ps -a
-          curl -sf http://localhost:8080/admin/ && echo "Pi-hole: OK" || echo "Pi-hole: FAILED"
-          curl -sf http://localhost:19000/ && echo "Overlord: OK" || echo "Overlord: FAILED"
+          
+          echo "=== Smoke test endpoints ==="
+          curl -sf http://127.0.0.1:8080/admin/ && echo "Pi-hole /admin/: OK" || echo "Pi-hole /admin/: FAILED"
+          curl -sf http://127.0.0.1:19000/ && echo "Overlord /: OK" || echo "Overlord /: FAILED"
+          curl -sf http://127.0.0.1:19000/alldns/ && echo "Overlord /alldns/: OK" || echo "Overlord /alldns/: FAILED"
+          
+          echo "=== Response bodies ==="
+          curl -s http://127.0.0.1:19000/ || true
+          echo ""
+          curl -s http://127.0.0.1:19000/alldns/ || true
+          echo ""
 
       - name: Run integration tests
+        env:
+          OVERLORD_URL: "http://127.0.0.1:19000"
+          PIHOLE_URL: "http://127.0.0.1:8080"
         run: |
           source .venv/bin/activate
           echo "=== Running pytest ==="
@@ -114,6 +126,16 @@ jobs:
           echo "=== Pytest exit code: $TEST_EXIT ==="
           cat pytest_output.txt
           exit $TEST_EXIT
+
+      - name: Show container state on failure
+        if: failure()
+        run: |
+          echo "=== Container status ==="
+          docker ps -a
+          echo "=== pihole-test inspect ==="
+          docker inspect pihole-test || true
+          echo "=== overlord-test inspect ==="
+          docker inspect overlord-test || true
 
       - name: Show container logs on failure
         if: failure()
