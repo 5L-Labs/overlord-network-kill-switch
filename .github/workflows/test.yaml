@@ -100,6 +100,11 @@ jobs:
           echo "Final status check:"
           curl -sf http://localhost:8080/admin/ && echo "Pi-hole: OK" || echo "Pi-hole: FAILED"
           curl -sf http://localhost:19000/ && echo "Overlord: OK" || echo "Overlord: FAILED"
+          
+          echo "=== Container status ==="
+          docker ps -a
+          echo "=== Overlord container logs ==="
+          docker logs overlord-test 2>&1 | tail -50 || true
 
       - name: Run integration tests
         run: |
