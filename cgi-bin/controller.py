@@ -175,7 +175,7 @@ async def publish_to_mqtt(mqtt_config: dict, status: str):
                 await client.publish(topic, status, retain=True)
                 logger.info(f"Published LWT of '{status}' to '{topic}'...")
     except aiomqtt.MqttError as e:
-        logger.error(f"An error occurred: {e} for {topic_list} and {status}")
+        logger.warning(f"MQTT publish failed (non-fatal): {e} for {lwt_topics}")
 
 
 @asynccontextmanager

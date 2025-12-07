@@ -119,6 +119,8 @@ jobs:
           docker run -d --name overlord-build-test \
             -e REMOTE_PI_LIST="localhost" \
             -e REMOTE_PI_PASSWORD="test" \
+            -e REMOTE_UBIQUITI_DEVICE="localhost" \
+            -e REMOTE_UBIQUITI_API_KEY="test" \
             -p 19001:19000 \
             overlord-test
           sleep 15
