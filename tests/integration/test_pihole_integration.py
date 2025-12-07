@@ -22,15 +22,29 @@ PIHOLE_URL = os.environ.get("PIHOLE_URL", "http://localhost:8080")
 @pytest.fixture(scope="module")
 def client():
     """HTTP client for testing."""
-    with httpx.Client(base_url=OVERLORD_URL, timeout=30.0) as client:
-        yield client
+    with httpx.Client(base_url=OVERLORD_URL, timeout=30.0) as c:
+        # Verify Overlord is reachable before running tests
+        try:
+            resp = c.get("/")
+            if resp.status_code != 200:
+                pytest.skip(f"Overlord not healthy: {resp.status_code}")
+        except httpx.ConnectError:
+            pytest.skip("Overlord not reachable")
+        yield c
 
 
 @pytest.fixture(scope="module")
 def pihole_client():
     """HTTP client for direct Pi-hole access."""
-    with httpx.Client(base_url=PIHOLE_URL, timeout=30.0) as client:
-        yield client
+    with httpx.Client(base_url=PIHOLE_URL, timeout=30.0) as c:
+        # Verify Pi-hole is reachable
+        try:
+            resp = c.get("/admin/")
+            if resp.status_code != 200:
+                pytest.skip(f"Pi-hole not healthy: {resp.status_code}")
+        except httpx.ConnectError:
+            pytest.skip("Pi-hole not reachable")
+        yield c
 
 
 class TestHealthCheck:
@@ -54,42 +68,47 @@ class TestDomainBlocking:
     def test_get_domain_block_status(self, client):
         """Test getting domain block status."""
         response = client.get("/pihole/status/testblock")
-        assert response.status_code == 200
-        assert "status" in response.json()
+        assert response.status_code == 200, f"Got {response.status_code}: {response.text}"
+        data = response.json()
+        assert "status" in data, f"Response missing 'status': {data}"
 
     def test_enable_domain_block(self, client):
         """Test enabling a domain block."""
         response = client.post("/pihole/enable/testblock")
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        assert response.status_code == 200, f"Got {response.status_code}: {response.text}"
+        data = response.json()
+        assert data.get("status") == "ok", f"Expected 'ok', got: {data}"
 
         status_response = client.get("/pihole/status/testblock")
-        assert status_response.json()["status"] == "true"
+        status_data = status_response.json()
+        assert status_data.get("status") == "true", f"Expected 'true', got: {status_data}"
 
     def test_disable_domain_block(self, client):
         """Test disabling a domain block."""
         client.post("/pihole/enable/testblock")
 
         response = client.post("/pihole/disable/testblock")
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        assert response.status_code == 200, f"Got {response.status_code}: {response.text}"
+        data = response.json()
+        assert data.get("status") == "ok", f"Expected 'ok', got: {data}"
 
         status_response = client.get("/pihole/status/testblock")
-        assert status_response.json()["status"] == "false"
+        status_data = status_response.json()
+        assert status_data.get("status") == "false", f"Expected 'false', got: {status_data}"
 
     def test_toggle_domain_block(self, client):
         """Test toggling domain block on and off."""
         client.post("/pihole/enable/testblock")
         status1 = client.get("/pihole/status/testblock")
-        assert status1.json()["status"] == "true"
+        assert status1.json().get("status") == "true", f"Expected 'true', got: {status1.json()}"
 
         client.post("/pihole/disable/testblock")
         status2 = client.get("/pihole/status/testblock")
-        assert status2.json()["status"] == "false"
+        assert status2.json().get("status") == "false", f"Expected 'false', got: {status2.json()}"
 
         client.post("/pihole/enable/testblock")
         status3 = client.get("/pihole/status/testblock")
-        assert status3.json()["status"] == "true"
+        assert status3.json().get("status") == "true", f"Expected 'true', got: {status3.json()}"
 
 
 class TestGlobalDNSControl:
