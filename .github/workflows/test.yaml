@@ -66,6 +66,9 @@ jobs:
           uv pip install -r etc/webserver_requirements.txt
           uv pip install -r etc/test_requirements.txt
 
+      - name: Prepare test environment
+        run: cp etc/config.ini.sample etc/config.ini
+
       - name: Start test containers
         run: |
           cd tests
@@ -118,6 +121,19 @@ jobs:
             -e REMOTE_PI_PASSWORD="test" \
             -p 19001:19000 \
             overlord-test
-          sleep 10
-          curl -f http://localhost:19001/ || (docker logs overlord-build-test && exit 1)
-          docker stop overlord-build-test
+          sleep 15
+          for i in 1 2 3 4 5; do
+            if curl -sf http://localhost:19001/; then
+              echo "Container is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting..."
+            sleep 5
+          done
+          echo "Container failed to start"
+          docker logs overlord-build-test
+          exit 1
+
+      - name: Cleanup build test
+        if: always()
+        run: docker stop overlord-build-test || true
