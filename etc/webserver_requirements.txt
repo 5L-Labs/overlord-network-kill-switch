@@ -25,7 +25,7 @@ pihole6api==0.2.0
 pyclean==3.1.0
 pydantic==2.11.4
 pydantic_core==2.33.2
-Pygments==2.19.1
+Pygments==2.20.0
 python-dotenv==1.1.0
 python-multipart==0.0.31
 PyYAML==6.0.2
